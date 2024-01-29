@@ -1,7 +1,12 @@
 
 #data folders
-data/
+data/group3/
+data/HumanActivityRecognition/
+data/medication_data/
+data/nih/
+data/group3.zip
+data/MotionSense/A_DeviceMotion_data/
+data/MotionSense/
 
 random/
 
-`
