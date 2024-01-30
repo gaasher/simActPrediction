@@ -89,7 +89,22 @@ class SimAP(pl.LightningModule):
         self.log('val_f1', f1)
 
         return loss
-    
+
+    def test_step(self, batch, batch_idx):
+        x, y = batch
+        y = y[:, 0].long()
+
+        y_hat, _ = self(x)
+        loss = self.criterion(y_hat, y)
+        acc = self.accuracy(torch.argmax(y_hat, dim=-1), y)
+        f1 = self.f1_score(torch.argmax(y_hat, dim=-1), y)
+
+        self.log('test_loss', loss)
+        self.log('test_acc', acc)
+        self.log('test_f1', f1)
+
+        return {'test_loss': loss, 'test_acc': acc, 'test_f1': f1}
+
     def configure_optimizers(self) :
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -189,7 +204,11 @@ if __name__ == '__main__':
         trainer.fit(model, dataset, ckpt_path=config['checkpoint_path'])
     else:
         trainer.fit(model, dataset)
-
+    
+    # Evaluate on test dataset
+    test_results = trainer.test(model, datamodule=dataset)
+    print(f"Test Results: {test_results}")
 
     # Finish wandb run
     wandb_logger.experiment.finish()
+
