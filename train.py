@@ -40,7 +40,13 @@ class SimAP(pl.LightningModule):
     def __init__(self, input_dim, num_classes, num_channels, embed_dim, heads, depth, dropout=0.0):
         super().__init__()
         self.save_hyperparameters()
-
+        self.input_dim = input_dim
+        self.num_classes = num_classes
+        self.num_channels = num_channels
+        self.embed_dim = embed_dim
+        self.heads = heads
+        self.depth = depth
+        self.dropout = dropout
 
         self.model = Model(input_dim, num_classes, num_channels, embed_dim, heads, depth, dropout)
         self.criterion = nn.CrossEntropyLoss()
@@ -51,6 +57,10 @@ class SimAP(pl.LightningModule):
     
     def training_step(self, batch, batch_idx):
         x, y = batch
+        y = y[:, 0]
+        # turn into one-hot
+        y = torch.nn.functional.one_hot(y, num_classes=self.num_classes)
+
         y_hat, _ = self(x)
         loss = self.criterion(y_hat, y)
         acc = self.accuracy(y_hat, y)
@@ -60,6 +70,10 @@ class SimAP(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
+        y = y[:, 0]
+        # turn into one-hot
+        y = torch.nn.functional.one_hot(y, num_classes=self.num_classes)
+
         y_hat, _ = self(x)
         loss = self.criterion(y_hat, y)
         acc = self.accuracy(y_hat, y)
