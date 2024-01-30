@@ -145,6 +145,7 @@ if __name__ == '__main__':
         heads=config["heads"],
         depth=config["depth"],
         dropout=config["dropout"],
+        lr=config["lr"],
     )
 
     # Define callbacks
