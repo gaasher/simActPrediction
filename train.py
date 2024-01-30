@@ -54,34 +54,39 @@ class SimAP(pl.LightningModule):
         self.criterion = nn.CrossEntropyLoss()
         #accuracy
         self.accuracy = torchmetrics.classification.Accuracy(task="multiclass", num_classes=num_classes)
+        self.f1_score = torchmetrics.F1Score(num_classes=self.num_classes, average='macro', task='multiclass')
+
 
     def forward(self, x):
         return self.model(x)
     
     def training_step(self, batch, batch_idx):
         x, y = batch
-        y = y[:, 0]
+        y = y[:, 0].long()
         # turn into one-hot
-        y = torch.nn.functional.one_hot(y, num_classes=self.num_classes)
-
         y_hat, _ = self(x)
         loss = self.criterion(y_hat, y)
-        acc = self.accuracy(y_hat, y)
+        acc = self.accuracy(torch.argmax(y_hat, dim=-1), y)  # Accuracy expects class indices
+        f1 = self.f1_score(torch.argmax(y_hat, dim=-1), y)
+
         self.log('train_loss', loss)
         self.log('train_acc', acc)
+        self.log('train_f1', f1)
         return loss
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
-        y = y[:, 0]
+        y = y[:, 0].long()
         # turn into one-hot
-        y = torch.nn.functional.one_hot(y, num_classes=self.num_classes)
 
         y_hat, _ = self(x)
         loss = self.criterion(y_hat, y)
-        acc = self.accuracy(y_hat, y)
+        acc = self.accuracy(torch.argmax(y_hat, dim=-1), y)  # Accuracy expects class indices
+        f1 = self.f1_score(torch.argmax(y_hat, dim=-1), y)
+
         self.log('val_loss', loss)
         self.log('val_acc', acc)
+        self.log('val_f1', f1)
 
         return loss
     
@@ -156,9 +161,9 @@ if __name__ == '__main__':
         accelerator="cpu",
         #devices=[0],
         #strategy="ddp_find_unused_parameters_true",
-        precision='16-mixed',
+        precision='32',
         sync_batchnorm=True,
-        use_distributed_sampler=True,
+        # use_distributed_sampler=True,
         max_epochs=config["epochs"],
         callbacks=[checkpoint_callback, lr_monitor, model_summary],
         gradient_clip_val=1.,

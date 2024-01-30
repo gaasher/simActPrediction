@@ -10,9 +10,9 @@ class simAPDataset(Dataset):
         self.do_transform = do_transform
         self.transforms = ['noise', 'channel_off']
 
-        self.data = zarr.open(f'{self.path}/{stage}_data.zarr', mode='r')
-        self.labels = zarr.open(f'{self.path}/{stage}_labels.zarr', mode='r')
-
+        # open data from numpy arrays
+        self.data = np.load(f'{self.path}/{self.stage}_data.npy')
+        self.labels = np.load(f'{self.path}/{self.stage}_labels.npy')
 
     # create augmentation functions for 1) turn random channels into noise 2) add noise to random parts of the signal
     def channel_off(self, x, perc_off=0.2):
@@ -37,6 +37,10 @@ class simAPDataset(Dataset):
 
     def __getitem__(self, idx):
         x = self.data[idx]
+
+        # (seq_len, num_channels) -> (num_channels, seq_len)
+        x = np.transpose(x, (1, 0))
+
         y = self.labels[idx]
 
         x = self.normalize(x)

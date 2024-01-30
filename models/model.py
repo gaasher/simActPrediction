@@ -21,6 +21,7 @@ class Embedding(nn.Module):
         )
 
     def forward(self, x):
+        x = x.float()
         return self.embed(x)
     
 class Model(nn.Module):
@@ -57,7 +58,6 @@ class Model(nn.Module):
     
     def forward(self, x):
         # x shape is (batch_size, num_channels, seq_len)
-
         # embed data
         x = torch.stack([self.embedding[i](x[:,i,:]) for i in range(self.num_channels)], dim=1)
 
