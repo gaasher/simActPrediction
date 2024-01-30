@@ -50,7 +50,9 @@ class SimAP(pl.LightningModule):
         self.dropout = dropout
         self.lr = lr
 
-        self.model = Model(input_dim, num_classes, num_channels, embed_dim, heads, depth, dropout)
+        num_tokens = input_dim * num_channels // 8
+
+        self.model = Model(input_dim, num_classes, num_channels, embed_dim, heads, depth, dropout, num_tokens=num_tokens)
         self.criterion = nn.CrossEntropyLoss()
         #accuracy
         self.accuracy = torchmetrics.classification.Accuracy(task="multiclass", num_classes=num_classes)
@@ -136,7 +138,7 @@ if __name__ == '__main__':
         "num_classes": 6,
         "num_channels": 12,
         "input_dim": 128, # 128 is the sequence length of each channel
-        "embed_dim": 256,
+        "embed_dim": 63,
         "heads": 6,
         "depth": 6,
         "dropout": 0.0,

@@ -12,35 +12,31 @@ Future embedding strategies:
 
 
 # start for initial embedding of model, start with simple linear layer, but obviously this can be explored further
+
 class Embedding(nn.Module):
-    def __init__(self, input_dim, embed_dim):
+    def __init__(self, token_size, embed_dim):
         super().__init__()
         self.embed = nn.Sequential(
-            nn.Linear(input_dim, embed_dim),
+            nn.Linear(token_size, embed_dim),
             nn.LayerNorm(embed_dim)
         )
 
     def forward(self, x):
         x = x.float()
         return self.embed(x)
-    
+
 class Model(nn.Module):
-    def __init__(self, input_dim, num_classes, num_channels, embed_dim, heads, depth, dropout=0.0):
+    def __init__(self, seq_len, num_classes, num_channels, embed_dim, heads, depth, dropout=0.0, num_tokens=192):
         super().__init__()
         self.embed_dim = embed_dim
-        self.heads = heads
-        self.depth = depth
         self.num_channels = num_channels
         self.num_classes = num_classes
-        self.input_dim = input_dim
+        self.seq_len = seq_len
+        self.num_tokens = num_tokens
 
-        # for each channel we will have a separate embedding
-        self.embedding = nn.ModuleList([
-            # in dim is sequence length of raw channel data, we will embed each channel separately
-            Embedding(self.input_dim, self.embed_dim) for i in range(num_channels)
-        ])
+        token_size = (num_channels * seq_len) // num_tokens
+        self.embedding = Embedding(token_size, embed_dim)
 
-        # encoder, we have a sequence length of num_channels
         self.encoder = Encoder(
             dim = embed_dim,
             depth = depth,
@@ -48,7 +44,6 @@ class Model(nn.Module):
             layer_dropout = dropout
         )
 
-        #simple classifier
         self.classifier = nn.Sequential(
             nn.Linear(embed_dim, num_classes),
             nn.Softmax(dim=-1)
@@ -57,18 +52,19 @@ class Model(nn.Module):
         self.cls = nn.Parameter(torch.randn(1, 1, embed_dim))
     
     def forward(self, x):
-        # x shape is (batch_size, num_channels, seq_len)
-        # embed data
-        x = torch.stack([self.embedding[i](x[:,i,:]) for i in range(self.num_channels)], dim=1)
-
-        # add cls token
-        cls_token = repeat(self.cls, '() n d -> b n d', b = x.shape[0])
-        x = torch.cat((cls_token, x), dim=1)
-
-        # pass data through encoder, for now each channel is treated as a separate token
-        x = self.encoder(x)
+        # Using einops to rearrange the tensor
+        x = rearrange(x, 'b c s -> b (c s)') # Flatten channel and sequence length dimensions
+        x = rearrange(x, 'b (t token) -> b t token', token=(self.num_channels * self.seq_len) // self.num_tokens)
         
-        # pass cls token through decoder
+        # Embed tokens
+        x = self.embedding(x)
+
+        # Add cls token and pass data through the encoder
+        cls_token = repeat(self.cls, '() n d -> b n d', b=x.shape[0])
+        x = torch.cat((cls_token, x), dim=1)
+        x = self.encoder(x)
+
+        # Classifier
         cls = x[:,0,:]
         y_hat = self.classifier(cls)
 
