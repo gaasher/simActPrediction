@@ -12,6 +12,7 @@ from pytorch_lightning.callbacks import (
 from pytorch_lightning.loggers import WandbLogger
 from models.model import Model
 from dataset import simAPDataset
+import torchmetrics
 
 class APDataloader(pl.LightningDataModule):
     def __init__(self, path, batch_size, shuffle, num_workers=0, transform=None):
@@ -37,7 +38,7 @@ class APDataloader(pl.LightningDataModule):
         return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
 
 class SimAP(pl.LightningModule):
-    def __init__(self, input_dim, num_classes, num_channels, embed_dim, heads, depth, dropout=0.0):
+    def __init__(self, input_dim, num_classes, num_channels, embed_dim, heads, depth, lr=1e-3, dropout=0.0):
         super().__init__()
         self.save_hyperparameters()
         self.input_dim = input_dim
@@ -47,10 +48,12 @@ class SimAP(pl.LightningModule):
         self.heads = heads
         self.depth = depth
         self.dropout = dropout
+        self.lr = lr
 
         self.model = Model(input_dim, num_classes, num_channels, embed_dim, heads, depth, dropout)
         self.criterion = nn.CrossEntropyLoss()
-        self.accuracy = pl.metrics.Accuracy()
+        #accuracy
+        self.accuracy = torchmetrics.classification.Accuracy(task="multiclass", num_classes=num_classes)
 
     def forward(self, x):
         return self.model(x)
