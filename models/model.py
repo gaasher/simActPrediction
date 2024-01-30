@@ -4,6 +4,13 @@ import math
 from einops import rearrange, repeat
 from x_transformers import Encoder
 
+'''
+Future embedding strategies:
+1) patchify each chanel into several tokens, concat tokens
+2) make spectrogram, then pass to vit or CNN
+'''
+
+
 # start for initial embedding of model, start with simple linear layer, but obviously this can be explored further
 class Embedding(nn.Module):
     def __init__(self, input_dim, embed_dim):
@@ -15,7 +22,7 @@ class Embedding(nn.Module):
 
     def forward(self, x):
         return self.embed(x)
-
+    
 class Model(nn.Module):
     def __init__(self, input_dim, num_classes, num_channels, embed_dim, heads, depth, dropout=0.0):
         super().__init__()
