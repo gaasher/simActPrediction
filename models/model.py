@@ -14,10 +14,10 @@ Future embedding strategies:
 # start for initial embedding of model, start with simple linear layer, but obviously this can be explored further
 
 class Embedding(nn.Module):
-    def __init__(self, token_size, embed_dim):
+    def __init__(self, input_size, embed_dim):
         super().__init__()
         self.embed = nn.Sequential(
-            nn.Linear(token_size, embed_dim),
+            nn.Linear(input_size, embed_dim),
             nn.LayerNorm(embed_dim)
         )
 
@@ -26,17 +26,25 @@ class Embedding(nn.Module):
         return self.embed(x)
 
 class Model(nn.Module):
-    def __init__(self, seq_len, num_classes, num_channels, embed_dim, heads, depth, dropout=0.0, num_tokens=192):
+    def __init__(self, seq_len, num_classes, num_channels, embed_dim, heads, depth, token_strat='channel', dropout=0.0, num_tokens=192):
         super().__init__()
         self.embed_dim = embed_dim
         self.num_channels = num_channels
         self.num_classes = num_classes
         self.seq_len = seq_len
         self.num_tokens = num_tokens
+        self.token_strat = token_strat
 
-        token_size = (num_channels * seq_len) // num_tokens
-        self.embedding = Embedding(token_size, embed_dim)
+        if self.token_strat == 'seq':
+            token_size = (num_channels * seq_len) // num_tokens
+            self.embedding = Embedding(token_size, embed_dim)
 
+        elif self.token_strat == 'channel':
+            # Initialize separate embedding layers for each channel
+            self.embedding = nn.ModuleList([Embedding(seq_len, embed_dim) for _ in range(num_channels)])
+        else:
+            raise ValueError('Invalid token strategy')
+        
         self.encoder = Encoder(
             dim = embed_dim,
             depth = depth,
@@ -53,13 +61,18 @@ class Model(nn.Module):
     
     def forward(self, x):
         # Using einops to rearrange the tensor
-        x = rearrange(x, 'b c s -> b (c s)') # Flatten channel and sequence length dimensions
-        x = rearrange(x, 'b (t token) -> b t token', token=(self.num_channels * self.seq_len) // self.num_tokens)
+        if self.token_strat == 'seq':
+            x = rearrange(x, 'b c s -> b (c s)') # Flatten channel and sequence length dimensions
+            x = rearrange(x, 'b (t token) -> b t token', token=(self.num_channels * self.seq_len) // self.num_tokens)
         
-        # Embed tokens
-        x = self.embedding(x)
+            # Embed tokens
+            x = self.embedding(x)
 
-        # Add cls token and pass data through the encoder
+        elif self.token_strat == 'channel':
+            # Embed each channel separately
+            x = torch.stack([self.embedding[i](x[:,i,:]) for i in range(self.num_channels)], dim=1)           
+
+        # add cls token
         cls_token = repeat(self.cls, '() n d -> b n d', b=x.shape[0])
         x = torch.cat((cls_token, x), dim=1)
         x = self.encoder(x)

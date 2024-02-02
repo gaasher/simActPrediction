@@ -15,18 +15,18 @@ from dataset import simAPDataset
 import torchmetrics
 
 class APDataloader(pl.LightningDataModule):
-    def __init__(self, path, batch_size, shuffle, num_workers=0, transform=None):
+    def __init__(self, path, batch_size, shuffle, num_workers=0, do_transform=False):
         super().__init__()
         self.path = path
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.num_workers = num_workers
-        self.transform = transform
+        self.do_transform = do_transform
 
 
-        self.train_dataset = simAPDataset(path, 'train', transform)
-        self.val_dataset = simAPDataset(path, 'val', transform)
-        self.test_dataset = simAPDataset(path, 'test', transform)
+        self.train_dataset = simAPDataset(path, 'train', do_transform)
+        self.val_dataset = simAPDataset(path, 'val', do_transform)
+        self.test_dataset = simAPDataset(path, 'test', do_transform)
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
@@ -38,7 +38,7 @@ class APDataloader(pl.LightningDataModule):
         return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
 
 class SimAP(pl.LightningModule):
-    def __init__(self, input_dim, num_classes, num_channels, embed_dim, heads, depth, lr=1e-3, dropout=0.0):
+    def __init__(self, input_dim, num_classes, num_channels, embed_dim, heads, depth, lr=1e-3, dropout=0.0, token_strat='channel'):
         super().__init__()
         self.save_hyperparameters()
         self.input_dim = input_dim
@@ -49,10 +49,12 @@ class SimAP(pl.LightningModule):
         self.depth = depth
         self.dropout = dropout
         self.lr = lr
+        self.token_strat = token_strat
 
         num_tokens = input_dim * num_channels // 8
 
-        self.model = Model(input_dim, num_classes, num_channels, embed_dim, heads, depth, dropout, num_tokens=num_tokens)
+        self.model = Model(seq_len=input_dim, num_classes=num_classes, num_channels=num_channels, embed_dim=embed_dim, 
+                           heads=heads, depth=depth, dropout=dropout, num_tokens=num_tokens, token_strat=token_strat)
         self.criterion = nn.CrossEntropyLoss()
         #accuracy
         self.accuracy = torchmetrics.classification.Accuracy(task="multiclass", num_classes=num_classes)
@@ -138,11 +140,13 @@ if __name__ == '__main__':
         "num_classes": 6,
         "num_channels": 12,
         "input_dim": 128, # 128 is the sequence length of each channel
-        "embed_dim": 63,
+        "embed_dim": 512,
         "heads": 6,
         "depth": 6,
         "dropout": 0.0,
         "checkpoint_path": None,
+        "do_transform": True,
+        "token_strat": "channel", # or could be 'seq'
     }
 
 
@@ -163,6 +167,7 @@ if __name__ == '__main__':
         path = config["dataset_path"],
         batch_size=config["batch_size"],
         shuffle=config["shuffle"],
+        do_transform=config["do_transform"],
     )
 
     # Initialize model
@@ -175,6 +180,7 @@ if __name__ == '__main__':
         depth=config["depth"],
         dropout=config["dropout"],
         lr=config["lr"],
+        token_strat=config["token_strat"],
     )
 
     # Define callbacks
