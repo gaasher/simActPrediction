@@ -25,8 +25,8 @@ class APDataloader(pl.LightningDataModule):
 
 
         self.train_dataset = simAPDataset(path, 'train', do_transform)
-        self.val_dataset = simAPDataset(path, 'val', do_transform)
-        self.test_dataset = simAPDataset(path, 'test', do_transform)
+        self.val_dataset = simAPDataset(path, 'val', do_transform=False)
+        self.test_dataset = simAPDataset(path, 'test', do_transform = False) # hard code this for test set
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
