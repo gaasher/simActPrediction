@@ -194,8 +194,8 @@ if __name__ == '__main__':
 
     # Set up trainer and fit
     trainer = pl.Trainer(
-        accelerator="cpu",
-        #devices=[0],
+        accelerator="gpu",
+        devices=[0],
         #strategy="ddp_find_unused_parameters_true",
         precision='32',
         sync_batchnorm=True,

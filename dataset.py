@@ -15,15 +15,17 @@ class simAPDataset(Dataset):
         self.labels = np.load(f'{self.path}/{self.stage}_labels.npy')
 
     # create augmentation functions for 1) turn random channels into noise 2) add noise to random parts of the signal
-    def channel_off(self, x, perc_off=0.2):
+    def channel_off(self, x, max_perc_off=0.3):
         #shape of x is (num_channels, 128)
+        perc_off = np.random.uniform(0, max_perc_off)
         num_off = int(perc_off * x.shape[0])
         off_idx = np.random.choice(x.shape[0], num_off, replace=False)
         x[off_idx] = np.random.normal(0, 1, (num_off, 128))
         return x
     
-    def add_noise(self, x, perc_noise=0.2):
+    def add_noise(self, x, max_perc_noise=0.2):
         #shape of x is (num_channels, 128)
+        perc_noise = np.random.uniform(0, max_perc_noise)
         noise_idx = np.random.choice(x.shape[1], int(perc_noise * x.shape[1]), replace=False)
         x[:, noise_idx] = np.random.normal(0, 1, (x.shape[0], len(noise_idx)))
         return x
