@@ -9,6 +9,7 @@ data/MotionSense/A_DeviceMotion_data/
 data/MotionSense/
 data/zarr/
 data/A_DeviceMotion_data
+data/HAR/
 
 random/
 
