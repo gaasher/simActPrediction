@@ -36,7 +36,7 @@ class APDataloader(pl.LightningDataModule):
     
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
-
+    
 class SimAP(pl.LightningModule):
     def __init__(self, input_dim, num_classes, num_channels, embed_dim, heads, depth, lr=1e-3, dropout=0.0, token_strat='channel'):
         super().__init__()
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     pl.seed_everything(40)
 
     config = {
-        "dataset_path": "./data/MotionSense/",
+        "dataset_path": "./data/combined/",
         "batch_size": 32,
         "shuffle": True,
         "epochs": 10,
@@ -194,8 +194,8 @@ if __name__ == '__main__':
 
     # Set up trainer and fit
     trainer = pl.Trainer(
-        accelerator="gpu",
-        devices=[0],
+        accelerator="cpu",
+        #devices=[0],
         #strategy="ddp_find_unused_parameters_true",
         precision='32',
         sync_batchnorm=True,
