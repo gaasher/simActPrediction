@@ -11,8 +11,6 @@ Future embedding strategies:
 '''
 
 
-# start for initial embedding of model, start with simple linear layer, but obviously this can be explored further
-
 class Embedding(nn.Module):
     def __init__(self, input_size, embed_dim):
         super().__init__()
@@ -35,16 +33,17 @@ class Model(nn.Module):
         self.num_tokens = num_tokens
         self.token_strat = token_strat
 
-        if self.token_strat == 'seq':
+        if token_strat == 'seq':
             token_size = (num_channels * seq_len) // num_tokens
             self.embedding = Embedding(token_size, embed_dim)
-
-        elif self.token_strat == 'channel':
+        elif token_strat == 'channel':
             # Initialize separate embedding layers for each channel
             self.embedding = nn.ModuleList([Embedding(seq_len, embed_dim) for _ in range(num_channels)])
-        else:
-            raise ValueError('Invalid token strategy')
-        
+        elif token_strat == 'flattened':
+            # initialize a codebook of size 1001, and embed it to the desired dimension
+            self.embedding = nn.Embedding(1001, embed_dim)
+
+
         self.encoder = Encoder(
             dim = embed_dim,
             depth = depth,
@@ -68,13 +67,28 @@ class Model(nn.Module):
             # Embed tokens
             x = self.embedding(x)
 
+            # Add cls token and pass data through the encoder
+            cls_token = repeat(self.cls, '() n d -> b n d', b=x.shape[0])
+            x = torch.cat((cls_token, x), dim=1)
+        
         elif self.token_strat == 'channel':
             # Embed each channel separately
             x = torch.stack([self.embedding[i](x[:,i,:]) for i in range(self.num_channels)], dim=1)           
+            print(x.shape)
 
-        # add cls token
-        cls_token = repeat(self.cls, '() n d -> b n d', b=x.shape[0])
-        x = torch.cat((cls_token, x), dim=1)
+            # add cls token
+            cls_token = repeat(self.cls, '() n d -> b n d', b=x.shape[0])
+            x = torch.cat((cls_token, x), dim=1)
+            print(x.shape)
+
+        elif self.token_strat == 'flattened':
+            x = rearrange(x, 'b c s -> b (c s)')
+            #multiply by 1000 to get the discrete values
+            x = (x * 1000).long()
+            print(x)
+            x = self.embedding(x)
+            cls_token = repeat(self.cls, '() n d -> b n d', b=x.shape[0])
+            x = torch.cat((cls_token, x), dim=1)
         x = self.encoder(x)
 
         # Classifier

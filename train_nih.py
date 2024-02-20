@@ -104,7 +104,7 @@ class SimAP(pl.LightningModule):
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
         x, y = batch
-        y = y[:, 0].long()
+        y = y.long()
 
         y_hat, _ = self(x)
         loss = self.criterion(y_hat, y)
