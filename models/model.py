@@ -57,6 +57,8 @@ class Model(nn.Module):
             depth = depth,
             heads = heads,
             layer_dropout = dropout,
+            alibi_pos_bias = True, # turns on ALiBi positional embedding
+            alibi_num_heads = 4    # only use ALiBi for 4 out of the n heads, 
 
         )
 
