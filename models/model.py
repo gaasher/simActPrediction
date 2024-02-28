@@ -100,6 +100,7 @@ class Model(nn.Module):
                 #reconstruct the input
                 x = self.recon_classifier(x)
                 x = x.squeeze(-1)
+                x = x[:,1:]
                 return None, x
             
             else:

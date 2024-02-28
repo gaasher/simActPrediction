@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from torch.utils.data import Dataset
 
 class SSLDataset(Dataset):
-    def __init__(self, path, stage, max=np.array([3.14159274e+00, 1.56960034e+00, 3.14159250e+00, 9.43980408e+00,
+    def __init__(self, path, stage, seq_len=128, max=np.array([3.14159274e+00, 1.56960034e+00, 3.14159250e+00, 9.43980408e+00,
         3.51681976e+01, 1.13550110e+01, 4.67008477e+04, 8.15972363e+03,
         1.16144785e+04, 1.12840000e+04, 4.40000000e+03, 2.69869995e+02]), 
         min=np.array([-3.14159250e+00, -1.57079637e+00, -3.14159274e+00, -1.06317291e+01,
@@ -14,15 +14,14 @@ class SSLDataset(Dataset):
 
         super().__init__()
         self.path = path
+        self.max = max
+        self.min = min
+        self.seq_len = seq_len
 
         # open data from parquet
         self.data = pd.read_parquet(f'{self.path}/nih_ssl_{stage}.parquet')
 
         self.data = self.data.astype(np.float64) # shape is (num_samples, seq_len, num_channels)
-        self.data = (self.data - min) / (max - min)
-
-        # if any data is < 0 replace with 0 and if any data is > 1 replace with 1
-        self.data = np.clip(self.data, 0, 1)
 
         self.data_shape = self.data.shape
         print(f'Loaded {stage} data with shape {self.data.shape}')
@@ -37,7 +36,7 @@ class SSLDataset(Dataset):
             start_index = file_data.index[0]
 
             for i in range(0, len(file_data), 64):
-                if i+128 <= len(file_data):
+                if i+seq_len <= len(file_data):
                     try:
                         self.start_indices.append(i+start_index)
                     except:
@@ -47,9 +46,14 @@ class SSLDataset(Dataset):
         self.data = self.data.to_numpy()
 
     def __len__(self):
-        return len(self.data)
+        return len(self.start_indices)
 
     def __getitem__(self, idx):
         index = self.start_indices[idx]
         # return last 12 column of data for index: index to index+128
-        return self.data[index:index+128, 2:]
+        data =  self.data[index:index+self.seq_len, 2:]
+        # normalize data
+        data = (data - self.min) / (self.max - self.min)
+        #clip data
+        data = np.clip(data, 0, 1)
+        return data
