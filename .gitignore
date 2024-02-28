@@ -10,6 +10,9 @@ data/MotionSense/
 data/zarr/
 data/A_DeviceMotion_data
 data/HAR/
+data/combined
+data/processed_nih/
+data/processed_datasets/
 
 random/
 

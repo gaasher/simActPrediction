@@ -104,6 +104,12 @@ class SimAP(pl.LightningModule):
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
         x, y = batch
+        # ensure x is in [0, 1] range
+        under_range = x < 0
+        over_range = x > 1
+        x[under_range] = 0.
+        x[over_range] = 1.
+
         y = y.long()
 
         y_hat, _ = self(x)
@@ -141,7 +147,7 @@ if __name__ == '__main__':
 
     config = {
         "dataset_path": "./data/processed_datasets/",
-        "batch_size": 32,
+        "batch_size": 4,
         "shuffle": True,
         "epochs": 10,
         "lr": 1e-3,
@@ -154,7 +160,7 @@ if __name__ == '__main__':
         "dropout": 0.0,
         "checkpoint_path": None,
         "do_transform": False,
-        "token_strat": "channel", # or could be 'seq'
+        "token_strat": "flattened", # or could be 'seq'
     }
 
 

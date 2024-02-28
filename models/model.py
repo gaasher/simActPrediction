@@ -23,8 +23,9 @@ class Embedding(nn.Module):
         x = x.float()
         return self.embed(x)
 
+
 class Model(nn.Module):
-    def __init__(self, seq_len, num_classes, num_channels, embed_dim, heads, depth, token_strat='channel', dropout=0.0, num_tokens=192):
+    def __init__(self, seq_len, num_classes, num_channels, embed_dim, heads, depth, token_strat='channel', dropout=0.0, num_tokens=192, ssl=False, mask_pct = 0.25, task='pretrain'):
         super().__init__()
         self.embed_dim = embed_dim
         self.num_channels = num_channels
@@ -32,6 +33,12 @@ class Model(nn.Module):
         self.seq_len = seq_len
         self.num_tokens = num_tokens
         self.token_strat = token_strat
+        self.ssl = ssl
+        self.mask_pct = mask_pct
+        self.task = task
+
+        #if we're doing ssl we need flattened token strategy
+        assert not (self.ssl and self.token_strat != 'flattened')
 
         if token_strat == 'seq':
             token_size = (num_channels * seq_len) // num_tokens
@@ -43,12 +50,14 @@ class Model(nn.Module):
             # initialize a codebook of size 1001, and embed it to the desired dimension
             self.embedding = nn.Embedding(1001, embed_dim)
 
+        self.batch_norm = nn.BatchNorm1d(embed_dim)
 
         self.encoder = Encoder(
             dim = embed_dim,
             depth = depth,
             heads = heads,
-            layer_dropout = dropout
+            layer_dropout = dropout,
+
         )
 
         self.classifier = nn.Sequential(
@@ -56,9 +65,49 @@ class Model(nn.Module):
             nn.Softmax(dim=-1)
         )
 
+        self.mask_token = nn.Parameter(torch.randn(1, 1, embed_dim))
+
         self.cls = nn.Parameter(torch.randn(1, 1, embed_dim))
+
+        self.recon_classifier = nn.Sequential(
+            nn.Linear(embed_dim, 1)
+            )
     
     def forward(self, x):
+        # if ssl we do everything separately
+        if self.ssl:
+            # first we flatten the input
+            x = rearrange(x, 'b c s -> b (c s)')
+
+            #multiply by 1000 to get the discrete values, then embed
+            x = (x * 1000).long()
+            x = self.embedding(x)
+
+            #mask the input first by randomly choosing tokens to mask (dim=1)
+            mask = torch.rand(x.shape[0], x.shape[1]) < self.mask_pct
+
+            #replace the masked tokens with the mask token
+            x[mask] = self.mask_token
+
+            # add cls token
+            cls_token = repeat(self.cls, '() n d -> b n d', b=x.shape[0])
+            x = torch.cat((cls_token, x), dim=1)
+
+            #pass through the encoder
+            x = self.encoder(x)
+
+            if self.task == 'pretrain':
+                #reconstruct the input
+                x = self.recon_classifier(x)
+                x = x.squeeze(-1)
+                return None, x
+            
+            else:
+                #classify
+                cls = x[:,0,:]
+                y_hat = self.classifier(cls)
+                return y_hat, None
+
         # Using einops to rearrange the tensor
         if self.token_strat == 'seq':
             x = rearrange(x, 'b c s -> b (c s)') # Flatten channel and sequence length dimensions

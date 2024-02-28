@@ -27,7 +27,7 @@ class APDataloader(pl.LightningDataModule):
         self.train_dataset = simAPDataset(path, 'train', do_transform)
         self.val_dataset = simAPDataset(path, 'val', do_transform=False)
         self.test_dataset = simAPDataset(path, 'test', do_transform = False) # hard code this for test set
-        self.test_har_dataset = simAPDataset('./data/HAR/', 'test', do_transform = False) # hard code this for test set
+        # self.test_har_dataset = simAPDataset('./data/HAR/', 'test', do_transform = False) # hard code this for test set
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
@@ -43,14 +43,8 @@ class APDataloader(pl.LightningDataModule):
                     shuffle=False,
                     num_workers=0,
                 )
-        loader2 = DataLoader(
-                    self.test_har_dataset,
-                    batch_size = self.batch_size,
-                    shuffle=False,
-                    num_workers=0,
-                )
                     
-        return [loader1, loader2]
+        return loader1
     
 class SimAP(pl.LightningModule):
     def __init__(self, input_dim, num_classes, num_channels, embed_dim, heads, depth, lr=1e-3, dropout=0.0, token_strat='channel'):
