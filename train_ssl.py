@@ -26,7 +26,7 @@ class APDataloader(pl.LightningDataModule):
 
         self.train_dataset = SSLDataset(path, 'train')
         self.val_dataset = SSLDataset(path, 'val')
-        # self.test_har_dataset = simAPDataset('./data/HAR/', 'test', do_transform = False) # hard code this for test set
+        self.test_dataset = SSLDataset(path, 'test')
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
@@ -34,6 +34,9 @@ class APDataloader(pl.LightningDataModule):
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
+    
+    def test_dataloader(self):
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
     
     
 class SimAP(pl.LightningModule):
@@ -191,6 +194,10 @@ if __name__ == '__main__':
     else:
         trainer.fit(model, dataset)
     
+    # evaluate on test set
+    test_results = trainer.test(model, datamodule=dataset)
+    print(f"Test Results: {test_results}")
+
     # Finish wandb run
     wandb_logger.experiment.finish()
 
