@@ -25,7 +25,8 @@ class Embedding(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, seq_len, num_classes, num_channels, embed_dim, heads, depth, token_strat='channel', dropout=0.0, num_tokens=192, ssl=False, mask_pct = 0.25, task='pretrain'):
+    def __init__(self, seq_len, num_classes, num_channels, embed_dim, heads, depth, token_strat='channel', dropout=0.0, 
+                 num_tokens=192, ssl=False, mask_pct = 0.25, task='pretrain'):
         super().__init__()
         self.embed_dim = embed_dim
         self.num_channels = num_channels

@@ -39,7 +39,7 @@ class APDataloader(pl.LightningDataModule):
         return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=self.shuffle, num_workers=self.num_workers)
     
     
-class SimAP(pl.LightningModule):
+class SimAPSSL(pl.LightningModule):
     def __init__(self, input_dim, num_classes, num_channels, embed_dim, heads, depth, lr=1e-3, dropout=0.0, token_strat='flattened', ssl=True, mask_pct = 0.25, task='pretrain'):
         super().__init__()
         self.save_hyperparameters()
