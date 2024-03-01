@@ -48,15 +48,17 @@ class APDataloader(pl.LightningDataModule):
         return loader1
     
 class SimAP(pl.LightningModule):
-    def __init__(self, model_ckpt, num_classes, lr=1e-3, dropout=0.0):
+    def __init__(self, model_ckpt, num_classes, lr=1e-3, dropout=0.0, input_dim=128):
         super().__init__()
         self.save_hyperparameters()
         self.num_classes = num_classes
         self.dropout = dropout
         self.lr = lr
+        self.input_dim = input_dim
 
         print(f"Loading model from {model_ckpt}")
-        self.model = SimAPSSL.load_from_checkpoint(checkpoint_path=model_ckpt, num_classes=self.num_classes, task='finetune')
+        self.model = SimAPSSL.load_from_checkpoint(checkpoint_path=model_ckpt, num_classes=self.num_classes, task='finetune', 
+                                                    input_dim=self.input_dim)
 
         self.criterion = nn.CrossEntropyLoss()
         #accuracy
@@ -142,7 +144,7 @@ if __name__ == '__main__':
     config = {
         "checkpoint_path": None, 
         "dataset_path": "./data/processed_datasets/",
-        "batch_size": 4,
+        "batch_size": 64,
         "shuffle": True,
         "do_transform": False,
         "max":np.array([3.14159274e+00, 1.56960034e+00, 3.14159250e+00, 9.43980408e+00,
@@ -151,8 +153,9 @@ if __name__ == '__main__':
         'min':np.array([-3.14159250e+00, -1.57079637e+00, -3.14159274e+00, -1.06317291e+01,
         -1.36996613e+01, -1.10269775e+01, -2.36590332e+03, -9.05344043e+03,
         -3.21341064e+03, -5.03000000e+02,  3.21600008e+00,  0.00000000e+00]),
-        "epochs": 10,
+        "epochs": 50,
         "num_classes":9, 
+        "input_dim": 64, 
         "lr":1e-5, 
         "dropout":0.0,
         "model_ckpt": './trained_models/genial-water-8_best.ckpt'
@@ -165,7 +168,7 @@ if __name__ == '__main__':
         # id='2ju60nmw',
         config=config,
         log_model=False,
-        mode="offline",
+        mode="online",
     )
     config = wandb_logger.experiment.config
     model_name = wandb_logger.experiment.name
@@ -187,6 +190,7 @@ if __name__ == '__main__':
         num_classes=config["num_classes"],
         dropout=config["dropout"],
         lr=config["lr"],
+        input_dim=config['input_dim']
     )
 
     # Define callbacks
@@ -200,7 +204,7 @@ if __name__ == '__main__':
 
     # Set up trainer and fit
     trainer = pl.Trainer(
-        accelerator="cpu",
+        accelerator="gpu",
         #devices=[0],
         #strategy="ddp_find_unused_parameters_true",
         precision='32',
@@ -225,4 +229,5 @@ if __name__ == '__main__':
 
     # Finish wandb run
     wandb_logger.experiment.finish()
+
 
