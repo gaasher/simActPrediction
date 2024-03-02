@@ -16,7 +16,7 @@ import torchmetrics
 from train_ssl import  SimAPSSL
 
 class APDataloader(pl.LightningDataModule):
-    def __init__(self, path, batch_size, shuffle, num_workers=0, do_transform=False, max=None, min=None,):
+    def __init__(self, path, batch_size, shuffle, num_workers=0, do_transform=False, mmax=None, mmin=None,):
         super().__init__()
         self.path = path
         self.batch_size = batch_size
@@ -25,9 +25,9 @@ class APDataloader(pl.LightningDataModule):
         self.do_transform = do_transform
 
 
-        self.train_dataset = NIHDataset(path, 'train', do_transform, max=max, min=min)
-        self.val_dataset = NIHDataset(path, 'val', do_transform=False, max=max, min=min)
-        self.test_dataset = NIHDataset(path, 'test', do_transform = False, max=max, min=min) # hard code this for test set
+        self.train_dataset = NIHDataset(path, 'train', do_transform, mmax=mmax, mmin=mmin)
+        self.val_dataset = NIHDataset(path, 'val', do_transform=False, mmax=mmax, mmin=mmin)
+        self.test_dataset = NIHDataset(path, 'test', do_transform = False, mmax=mmax, mmin=mmin) # hard code this for test set
         # self.test_har_dataset = simAPDataset('./data/HAR/', 'test', do_transform = False) # hard code this for test set
 
     def train_dataloader(self):

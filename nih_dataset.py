@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from torch.utils.data import Dataset
 
 class NIHDataset(Dataset):
-    def __init__(self, path, stage, do_transform=False, transforms=None, max=None, min=None):
+    def __init__(self, path, stage, do_transform=False, transforms=None, mmax=None, mmin=None):
         super().__init__()
         self.path = path
         self.stage = stage
@@ -14,7 +14,7 @@ class NIHDataset(Dataset):
         # open data from numpy arrays
         self.data = np.load(f'{self.path}/nih_{self.stage}.npy', allow_pickle=True)
         self.data = self.data.astype(np.float64) # shape is (num_samples, seq_len, num_channels)
-        if max is not None and min is not None:
+        if mmax is None and mmin is None:
             # open train data for normalization
             self.train_data = np.load(f'{self.path}/nih_train.npy', allow_pickle=True)
             self.train_data = self.train_data.astype(np.float64) # shape is (num_samples, seq_len, num_channels)
@@ -25,9 +25,10 @@ class NIHDataset(Dataset):
             max_val = np.max(self.train_data[:, :, :12], axis=(0, 1))
             min_val = np.min(self.train_data[:, :, :12], axis=(0, 1))
         else:
-            print(f'max and min are: {max} and {min}')
-            max_val = max
-            min_val = min
+            print(f'max and min are: {mmax} and {mmin}')
+            max_val = np.array(mmax)
+            min_val = np.array(mmin)
+        
 
         # Normalize only the first 12 channels
         self.data[:, :, :12] = (self.data[:, :, :12] - min_val) / (max_val - min_val)
